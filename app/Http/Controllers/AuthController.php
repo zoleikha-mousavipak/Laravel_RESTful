@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 
 use App\User;
 use Illuminate\Http\Request;
+use PhpParser\Node\Stmt\TryCatch;
+use Tymon\JWTAuth\Exceptions\JWTException;
+use Tymon\JWTAuth\JWTAuth;
 
 class AuthController extends Controller
 {
@@ -65,19 +68,31 @@ class AuthController extends Controller
             'password' => 'required',
         ]);
 
-        $password = $request->input('password');
-        $email = $request->input('email');
-        $user = [
-            'name' => 'Name',
-            'email' => $email,
-            'password' => $password,
-        ];
+        $credentials = $request->only('email', 'password');
+        // $password = $request->input('password');
+        // $email = $request->input('email');
 
-        $response = [
-            'msg' => 'User signed in',
-            'user' => $user,
-        ];
+        try {
+            if (! $token = JWTAuth::attempt($credentials)){
+                return response()->json(['msg' => 'Invalid credentials'], 401);
+            }
+        } catch (JWTException $e) {
+            return response()->json(['msg' => 'Could not find token'], 500);
+        }
 
-        return response()->json($response, 200);
+        return response()->json(['token' => $token]);
+
+        // delete when we are using JWT
+        // $user = [
+        //     'name' => 'Name',
+        //     'email' => $email,
+        //     'password' => $password,
+        // ];
+
+        // $response = [
+        //     'msg' => 'User signed in',
+        //     'user' => $user,
+        // ];
+
     }
 }

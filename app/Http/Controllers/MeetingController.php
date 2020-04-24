@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Meeting;
+use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -78,7 +79,7 @@ class MeetingController extends Controller
 
         $meeting = new Meeting([
             'title' => $title,
-            'description' => 'description',
+            'description' => $description,
             'time' => Carbon::createFromFormat('YmdHie', $time)
         ]);
         if ($meeting->save()) {
@@ -196,7 +197,7 @@ class MeetingController extends Controller
             foreach ($users as $user) {
                 $meeting->users()->attach();
             }
-            return response()->json(['msg'=> 'Deletion failed'], 404);
+            return response()->json(['msg' => 'Deletion failed'], 404);
         }
 
         $response = [
