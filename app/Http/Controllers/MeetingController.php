@@ -6,13 +6,16 @@ use App\Meeting;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use JWTAuth;
 
 class MeetingController extends Controller
 {
 
     public function __construct()
     {
-        // $this->middleware('name');
+        $this->middleware('jwt.auth', ['only' => [
+            'update', 'store', 'destroy'
+        ]]);
     }
 
     /**
@@ -69,13 +72,21 @@ class MeetingController extends Controller
             'title' => 'required',
             'description' => 'required',
             'time' => 'required|date_format:YmdHie',
-            'user_id' => 'required'
+            // 'user_id' => 'required'
         ]);
+
+        // using user extracted from token
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['msg' => 'User not found'], 404);
+        }
 
         $title = $request->input('title');
         $description = $request->input('description');
         $time = $request->input('time');
-        $user_id = $request->input('user_id');
+
+        // using user id extracted from token
+        $user_id = $user->id;
+        // $user_id = $request->input('user_id');
 
         $meeting = new Meeting([
             'title' => $title,
@@ -83,7 +94,7 @@ class MeetingController extends Controller
             'time' => Carbon::createFromFormat('YmdHie', $time)
         ]);
         if ($meeting->save()) {
-            $meeting->user()->attach($user_id);
+            $meeting->users()->attach($user_id);
             $meeting->view_meeting = [
                 'href' => 'api/v1/meetings/' . $meeting->id,
                 'method' => 'GET',
@@ -137,13 +148,18 @@ class MeetingController extends Controller
             'title' => 'required',
             'description' => 'required',
             'time' => 'required|date_format:YmdHie',
-            'user_id' => 'required'
         ]);
+
+        // using user extracted from token
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['msg' => 'User not found'], 404);
+        }
 
         $title = $request->input('title');
         $description = $request->input('description');
         $time = $request->input('time');
-        $user_id = $request->input('user_id');
+        // using user id extracted from token
+        $user_id = $user->id;
         $meeting = [
             'title' => $title,
             'description' => $description,
@@ -156,8 +172,9 @@ class MeetingController extends Controller
         ];
         $meeting = Meeting::with('user')->firstOrFail($id);
 
-        if (!$meeting->user()->where('user_id', $user_id)->first()) {
-            return response()->json(['msg' => 'User not registered for meeting, update not successful'], 401);
+        if (!$meeting->users()->where('user_id', $user_id)->first()) {
+            return response()->json(['msg' => 'User not registered for meeting,
+            update not successful'], 401);
         }
 
         $meeting->time = Carbon::createFromFormat('YmdHie', $time);
@@ -190,6 +207,15 @@ class MeetingController extends Controller
     public function destroy($id)
     {
         $meeting = Meeting::findOrfail($id);
+        // using user extracted from token
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['msg' => 'User not found'], 404);
+        }
+        if (!$meeting->users()->where('user_id', $user->id)->first()) {
+            return response()->json(['msg' => 'User not registered for meeting,
+            delete not successful'], 401);
+        }
+
         $users = $meeting->users;
         $meeting->users()->detach();
 

@@ -6,10 +6,15 @@ use App\User;
 use Illuminate\Http\Request;
 use PhpParser\Node\Stmt\TryCatch;
 use Tymon\JWTAuth\Exceptions\JWTException;
-use Tymon\JWTAuth\JWTAuth;
+use JWTAuth;
 
 class AuthController extends Controller
 {
+    public function __construct()
+    {
+        // $this->middleware('jwt.auth');
+    }
+
     public function store(Request $request)
     {
         $this->validate($request, [
@@ -25,12 +30,13 @@ class AuthController extends Controller
         $user = new User([
             'name' => $name,
             'email' => $email,
-            'password' => bcrypt($password),
+            // 'password' => bcrypt($password),
+            'password' => $password,
         ]);
 
         if ($user->save()) {
             $user->signin = [
-                'hred' => 'api/v1/user/signin',
+                'href' => 'api/v1/user/signin',
                 'method' => 'POST',
                 'params' => 'email', 'password',
             ];
@@ -73,7 +79,7 @@ class AuthController extends Controller
         // $email = $request->input('email');
 
         try {
-            if (! $token = JWTAuth::attempt($credentials)){
+            if (!$token = JWTAuth::attempt($credentials)) {
                 return response()->json(['msg' => 'Invalid credentials'], 401);
             }
         } catch (JWTException $e) {
